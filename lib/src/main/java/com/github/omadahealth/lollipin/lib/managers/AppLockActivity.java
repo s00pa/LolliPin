@@ -45,7 +45,7 @@ public abstract class AppLockActivity extends PinActivity implements KeyboardBut
     protected LockManager mLockManager;
 
 
-    protected FingerprintManager mFingerprintManager;
+    protected FingerprintManager mFingerprintManager; // nullable
     protected FingerprintUiHelper mFingerprintUiHelper;
 
     protected int mType = AppLock.UNLOCK_PIN;
@@ -141,14 +141,18 @@ public abstract class AppLockActivity extends PinActivity implements KeyboardBut
         mFingerprintImageView = (ImageView) this.findViewById(R.id.pin_code_fingerprint_imageview);
         mFingerprintTextView = (TextView) this.findViewById(R.id.pin_code_fingerprint_textview);
         if (mType == AppLock.UNLOCK_PIN && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            mFingerprintManager = null; // (FingerprintManager) getSystemService(Context.FINGERPRINT_SERVICE);
+            mFingerprintManager = (FingerprintManager) getSystemService(Context.FINGERPRINT_SERVICE);
             mFingerprintUiHelper = new FingerprintUiHelper.FingerprintUiHelperBuilder(mFingerprintManager).build(mFingerprintImageView, mFingerprintTextView, this);
             try {
-            if (mFingerprintManager.isHardwareDetected() && mFingerprintUiHelper.isFingerprintAuthAvailable()
-                    && mLockManager.getAppLock().isFingerprintAuthEnabled()) {
+            if (mFingerprintUiHelper.isFingerprintAuthAvailable() &&
+                    mLockManager.getAppLock().isFingerprintAuthEnabled() &&
+                    mFingerprintManager != null &&
+                    mFingerprintManager.isHardwareDetected()) {
+
                     mFingerprintImageView.setVisibility(View.VISIBLE);
                     mFingerprintTextView.setVisibility(View.VISIBLE);
                     mFingerprintUiHelper.startListening();
+
                 } else {
                     mFingerprintImageView.setVisibility(View.GONE);
                     mFingerprintTextView.setVisibility(View.GONE);
