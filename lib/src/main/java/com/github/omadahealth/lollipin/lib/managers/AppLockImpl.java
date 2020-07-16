@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.Build;
 import android.preference.PreferenceManager;
 import android.util.Base64;
 import android.util.Log;
@@ -96,6 +95,10 @@ public class AppLockImpl<T extends AppLockActivity> extends AppLock implements L
      * Static instance of {@link AppLockImpl}
      */
     private static AppLockImpl mInstance;
+
+
+    private int activeActivityHashCode;
+
 
     /**
      * Static method that allows to get back the current static Instance of {@link AppLockImpl}
@@ -240,7 +243,9 @@ public class AppLockImpl<T extends AppLockActivity> extends AppLock implements L
 
     @Override
     public long getLastActiveMillis() {
-        return mSharedPreferences.getLong(LAST_ACTIVE_MILLIS_PREFERENCE_KEY, 0);
+        long millis = mSharedPreferences.getLong(LAST_ACTIVE_MILLIS_PREFERENCE_KEY, 0);
+        Log.d("getLastActiveMillis", ""+millis);
+        return millis;
     }
 
     @Override
@@ -257,9 +262,11 @@ public class AppLockImpl<T extends AppLockActivity> extends AppLock implements L
 
     @Override
     public void setLastActiveMillis() {
+        long millis = System.currentTimeMillis();
         SharedPreferences.Editor editor = mSharedPreferences.edit();
-        editor.putLong(LAST_ACTIVE_MILLIS_PREFERENCE_KEY, System.currentTimeMillis());
+        editor.putLong(LAST_ACTIVE_MILLIS_PREFERENCE_KEY, millis);
         editor.apply();
+        Log.d("setLastActiveMillis", ""+millis);
     }
 
     @Override
@@ -373,6 +380,12 @@ public class AppLockImpl<T extends AppLockActivity> extends AppLock implements L
 
     @Override
     public void onActivityPaused(Activity activity) {
+
+
+        if (activeActivityHashCode == activity.hashCode()) {
+            activeActivityHashCode = 0;
+        }
+
         if (isIgnoredActivity(activity)) {
             return;
         }
@@ -387,9 +400,15 @@ public class AppLockImpl<T extends AppLockActivity> extends AppLock implements L
 
     @Override
     public void onActivityUserInteraction(Activity activity) {
-        if (onlyBackgroundTimeout() && !shouldLockSceen(activity) && !(activity instanceof AppLockActivity)) {
+
+        if (onlyBackgroundTimeout() && activeActivityHashCode == activity.hashCode()
+                && /*!shouldLockSceen(activity) &&*/ !(activity instanceof AppLockActivity)) {
+            Log.d(TAG, "onActivityUserInteraction - setting last active millis");
             setLastActiveMillis();
+        } else {
+            Log.d(TAG, "onActivityUserInteraction - ignoring");
         }
+
     }
 
     @Override
@@ -409,13 +428,18 @@ public class AppLockImpl<T extends AppLockActivity> extends AppLock implements L
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             activity.getApplication().startActivity(intent);
         }
+        else if (!(activity instanceof AppLockActivity)) {
+            setLastActiveMillis();
+            activeActivityHashCode = activity.hashCode();
+        }
 
+
+        /*
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.GINGERBREAD_MR1) {
             return;
         }
+        */
 
-        if (!shouldLockSceen(activity) && !(activity instanceof AppLockActivity)) {
-            setLastActiveMillis();
-        }
+
     }
 }
