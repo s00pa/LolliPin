@@ -381,21 +381,27 @@ public class AppLockImpl<T extends AppLockActivity> extends AppLock implements L
     @Override
     public void onActivityPaused(Activity activity) {
 
+        try {
 
-        if (activeActivityHashCode == activity.hashCode()) {
-            activeActivityHashCode = 0;
+            if (isIgnoredActivity(activity)) {
+                return;
+            }
+
+            String clazzName = activity.getClass().getName();
+            Log.d(TAG, "onActivityPaused " + clazzName);
+
+            if (activeActivityHashCode == activity.hashCode() &&
+                    !(activity instanceof AppLockActivity) ) {
+                setLastActiveMillis();
+            }
+            
+        }
+        finally {
+            if (activeActivityHashCode == activity.hashCode()) {
+                activeActivityHashCode = 0;
+            }
         }
 
-        if (isIgnoredActivity(activity)) {
-            return;
-        }
-
-        String clazzName = activity.getClass().getName();
-        Log.d(TAG, "onActivityPaused " + clazzName);
-
-        if (!shouldLockSceen(activity) && !(activity instanceof AppLockActivity)) {
-            setLastActiveMillis();
-        }
     }
 
     @Override
